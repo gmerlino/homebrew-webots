@@ -34,7 +34,7 @@ make
 
 The standalone source build passed a falling-sphere physics test using C, C++, Python and Java controllers: height changed from 2.0 m to approximately 0.197963 m after 1.92 simulated seconds. Each controller writes a result file, so verification does not depend on console output being flushed at application shutdown.
 
-The GUI was checked interactively: rendering shows the sphere and floor; Step advances 32 ms; real-time execution drops the sphere onto the floor; Pause stops the simulation. The packaged bundle passed the same four physics/controller tests. The final Homebrew installation passed all four controller/physics tests, the occupied-port test, `brew test`, strict code-signature verification, `brew linkage --test`, `brew missing` and `brew style`. Visual confirmation of the installed vacuum-gripper sample remains pending because the UI automation service could not locate its window; the original cask is still retained.
+The GUI was checked interactively: rendering shows the sphere and floor; Step advances 32 ms; real-time execution drops the sphere onto the floor; Pause stops the simulation. The packaged bundle passed the same four physics/controller tests. The final Homebrew installation passed all four controller/physics tests, the occupied-port test, `brew test`, strict code-signature verification, `brew linkage --test`, `brew missing` and `brew style`. A subsequent vacuum-gripper GUI check exposed missing bundled PROTO assets: repository-style `webots://projects/` URLs did not account for the macOS `Contents` directory. Stable revision 1 maps project and resource URLs through the platform-aware paths and preserves portable URLs on export. The pinned nightly already contains an upstream equivalent, so it does not need this URL patch. The earlier simple-sphere tests did not cover this case. The fixed stable GUI subsequently rendered the complete scene, picked and released the box, and reported successful controller exit.
 
 `brew test` checks offscreen startup, loading the native controller API and compiling a C++ controller. The full physics/controller suite needs a macOS graphical session; Homebrew’s isolated test environment cannot access all required graphical services.
 
@@ -43,11 +43,12 @@ Run the extended controller tests from this tap:
 ```sh
 python3 tests/verify_controllers.py /opt/homebrew/opt/webots/Webots.app
 python3 tests/verify_ports.py /opt/homebrew/opt/webots/Webots.app
+python3 tests/verify_vacuum_gripper.py /opt/homebrew/opt/webots/Webots.app
 ```
 
 ## Migration
 
-The old cask is retained until installed-package verification completes. Back up the application, preferences and projects before removal, and do not use `--zap`. The migration backup on the validation machine is under `~/webots-migration/backup`. No user project is edited by the tests, which use a dedicated temporary project.
+The user has removed the old cask. Back up the application, preferences and projects before removal, and do not use `--zap`. The migration backup on the validation machine is under `~/webots-migration/backup`. No user project is edited by the tests, which use a dedicated temporary project.
 
 ## Nightly formula
 
@@ -61,3 +62,5 @@ webots-nightly
 The command and installation prefix are separate from stable Webots. Both bundles are named Webots.app and share upstream application identity and R2025a preferences: avoid running them simultaneously and back up settings before switching. No application link in /Applications is replaced.
 
 Nightly patches were refreshed against the pinned source and checked with a clean dry run. Its upstream port detection already includes the macOS peer validation fix, so the stable-only socket patch is omitted. Formula syntax/style and metadata are checked. The nightly was successfully built and installed on the validation machine (2026-11-23); GUI verification by the user is pending for both installed variants. The stable formula’s runtime tests do not certify the nightly.
+
+Revision 1 validation: `verify_vacuum_gripper.py` passed on both installed variants (pickup and vacuum release after 36.544 simulated seconds), with no asset-loading errors. Both bundles passed strict signature verification; linkage checks passed. The stable GUI also showed the full textured scene and successful controller completion. The generic robot-window library is explicitly signed before the outer application bundle.

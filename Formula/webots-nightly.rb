@@ -4,6 +4,7 @@ class WebotsNightly < Formula
   url "https://github.com/cyberbotics/webots.git", tag: "nightly_20_11_2026", revision: "49d2ab7df9efc95a6e7a44c31f114bf2c73fabb2"
   version "2026.11.20"
   license "Apache-2.0"
+  revision 1
 
   depends_on "swig" => :build
   depends_on xcode: :build
@@ -151,6 +152,11 @@ class WebotsNightly < Formula
   end
 
   post_install_steps do
+    run "/usr/bin/codesign",
+        args:           ["--force", "--sign", "-",
+                         "{{prefix}}/Webots.app/Contents/Resources/projects/plugins/" \
+                         "robot_windows/generic/libgeneric.dylib"],
+        writable_paths: ["{{prefix}}/Webots.app"]
     run "/usr/bin/codesign", args:           ["--force", "--sign", "-", "{{prefix}}/Webots.app"],
                              writable_paths: ["{{prefix}}/Webots.app"]
   end

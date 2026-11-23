@@ -4,6 +4,7 @@ class Webots < Formula
   url "https://github.com/cyberbotics/webots.git", tag: "R2025a", revision: "c6793d8f7230a311c4bc2a3101d9f1a8bc0aa01b"
   version "2025a"
   license "Apache-2.0"
+  revision 1
 
   depends_on "swig" => :build
   depends_on xcode: :build
@@ -151,6 +152,11 @@ class Webots < Formula
   end
 
   post_install_steps do
+    run "/usr/bin/codesign",
+        args:           ["--force", "--sign", "-",
+                         "{{prefix}}/Webots.app/Contents/Resources/projects/plugins/" \
+                         "robot_windows/generic/libgeneric.dylib"],
+        writable_paths: ["{{prefix}}/Webots.app"]
     run "/usr/bin/codesign", args:           ["--force", "--sign", "-", "{{prefix}}/Webots.app"],
                              writable_paths: ["{{prefix}}/Webots.app"]
   end
@@ -482,3 +488,82 @@ index 4daa8b8..4ba652c 100644
  INCLUDE = -I$(WEBOTS_HOME_PATH)/include -I$(WEBOTS_HOME_PATH)/include/glad -I../glm -I../webots/external/siphash/
  VERBOSE = 1
  
+
+--- a/src/webots/vrml/WbUrl.cpp
++++ b/src/webots/vrml/WbUrl.cpp
+@@ -31,6 +31,23 @@
+ #include <QtCore/QRegularExpression>
+ #include <QtCore/QUrl>
+ 
++// Keep repository-style asset URLs portable across the macOS bundle layout.
++static QString localAssetPath(QString url) {
++  if (url.startsWith("webots://projects/"))
++    return url.replace(0, 18, WbStandardPaths::projectsPath());
++  if (url.startsWith("webots://resources/"))
++    return url.replace(0, 19, WbStandardPaths::resourcesPath());
++  return url.replace("webots://", WbStandardPaths::webotsHomePath());
++}
++
++static QString portableAssetPath(QString url) {
++  if (url.startsWith(WbStandardPaths::projectsPath()))
++    return url.replace(0, WbStandardPaths::projectsPath().size(), "webots://projects/");
++  if (url.startsWith(WbStandardPaths::resourcesPath()))
++    return url.replace(0, WbStandardPaths::resourcesPath().size(), "webots://resources/");
++  return url.replace(WbStandardPaths::webotsHomePath(), "webots://");
++}
++
+ namespace {
+   static QString gWorldFileName;
+ };
+@@ -126,7 +143,7 @@
+     return url;
+ 
+   if (isLocalUrl(url))
+-    return QDir::cleanPath(url.replace("webots://", WbStandardPaths::webotsHomePath()));
++    return QDir::cleanPath(localAssetPath(url));
+ 
+   return QDir::cleanPath(url);
+ }
+@@ -209,13 +226,13 @@
+ 
+ QString WbUrl::computeLocalAssetUrl(QString url, bool isW3d) {
+   if (!isW3d)
+-    return url.replace(WbStandardPaths::webotsHomePath(), "webots://");
++    return portableAssetPath(url);
+ 
+   if (!WbApplicationInfo::repo().isEmpty() && !WbApplicationInfo::branch().isEmpty()) {
+     // when streaming locally, build the URL from branch.txt in order to serve 'webots://' assets
+     const QString prefix =
+       "https://raw.githubusercontent.com/" + WbApplicationInfo::repo() + "/" + WbApplicationInfo::branch() + "/";
+-    return url.replace("webots://", prefix).replace(WbStandardPaths::webotsHomePath(), prefix);
++    return portableAssetPath(url).replace("webots://", prefix);
+   }
+ 
+   // when streaming from a distribution or nightly build, use the actual url
+@@ -275,7 +292,7 @@
+   if (WbUrl::isLocalUrl(url)) {
+     // URL fall-back mechanism: only trigger if the parent is a world file (.wbt), and the file (webots://) does not exist
+     if (parentUrl.endsWith(".wbt", Qt::CaseInsensitive) &&
+-        !QFileInfo(QDir::cleanPath(url.replace("webots://", WbStandardPaths::webotsHomePath()))).exists()) {
++        !QFileInfo(QDir::cleanPath(localAssetPath(url))).exists()) {
+       WbLog::error(QObject::tr("URL '%1' changed by fallback mechanism. Ensure you are opening the correct world.").arg(url));
+       return url.replace("webots://", WbUrl::remoteWebotsAssetPrefix());
+     }
+@@ -286,7 +303,7 @@
+       return url.replace("webots://", prefix);
+ 
+     if (parentUrl.isEmpty() || WbUrl::isLocalUrl(parentUrl) || QDir::isAbsolutePath(parentUrl))
+-      return QDir::cleanPath(url.replace("webots://", WbStandardPaths::webotsHomePath()));
++      return QDir::cleanPath(localAssetPath(url));
+ 
+     return QString();
+   }
+@@ -299,7 +316,7 @@
+       // remove filename from parent url
+       parentUrl = parentUrl.sliced(0, parentUrl.lastIndexOf("/") + 1);
+       if (WbUrl::isLocalUrl(parentUrl))
+-        parentUrl.replace("webots://", WbStandardPaths::webotsHomePath());
++        parentUrl = localAssetPath(parentUrl);
+ 
+       if (WbUrl::isWeb(parentUrl))
+         return QUrl(parentUrl).resolved(QUrl(url)).toString();
