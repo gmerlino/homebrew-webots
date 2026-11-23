@@ -1,0 +1,19 @@
+#VRML_SIM R2025a utf8
+WorldInfo { basicTimeStep 32 coordinateSystem "ENU" }
+Viewpoint { orientation 0.33 0.91 0.25 1.2 position 4 -5 3 }
+Background { skyColor [ 0.15 0.2 0.3 ] }
+DirectionalLight { direction -1 1 -1 }
+Solid {
+ name "floor"
+ translation 0 0 -0.05
+ children [ Shape { appearance PBRAppearance { baseColor 0.4 0.4 0.4 roughness 1 metalness 0 } geometry Box { size 6 6 0.1 } } ]
+ boundingObject Box { size 6 6 0.1 }
+}
+DEF BALL Solid {
+ name "ball"
+ translation 0 0 2
+ children [ Shape { appearance PBRAppearance { baseColor 1 0.2 0.1 roughness 0.5 metalness 0 } geometry Sphere { radius 0.2 } } ]
+ boundingObject Sphere { radius 0.2 }
+ physics Physics { density -1 mass 1 }
+}
+Robot { supervisor TRUE controller "migration_python" }
